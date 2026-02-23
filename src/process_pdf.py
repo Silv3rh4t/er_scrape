@@ -4,7 +4,7 @@ from collections import defaultdict
 from box_detector import detect_voter_boxes
 from deleted_detector import is_deleted_box
 from header_detector import get_section_number
-from supplementary_detector import supplement_section
+from supplementary_detector import supplement_section  # correct import
 
 
 def process_pages(image_paths):
@@ -35,15 +35,25 @@ def process_pages(image_paths):
             print("Section detection failed on:", path)
             continue
 
-
-        # SUPPLEMENT PAGE
+        # ======= SUPPLEMENT PAGE =======
         if section_no == 0:
             print(f"Page {idx+1} -> Supplement List")
-            count_supplement(image, path, results)
+            
+            boxes = detect_voter_boxes(path)
+
+            print(f"DEBUG: {len(boxes)} boxes on supplement page {idx+1}")
+
+            for box in boxes:
+
+                sec_added = supplement_section(image, box, debug=True)  # use correct function
+
+                if sec_added is not None:
+                    print(f"DEBUG Added: Section {sec_added}")
+                    results[sec_added]["added"] += 1
+
             continue
 
-
-        # NORMAL MAIN ROLL PAGE
+        # ======= NORMAL MAIN ROLL =======
         print(f"Page {idx+1} -> Section {section_no}")
 
         boxes = detect_voter_boxes(path)
@@ -54,7 +64,7 @@ def process_pages(image_paths):
             if is_deleted_box(image, box):
                 results[section_no]["deleted"] += 1
 
-    # FINAL NET COMPUTATION
+    # ======= COMPUTE FINAL RESULTS =======
 
     final_results = {}
 
@@ -67,16 +77,3 @@ def process_pages(image_paths):
         }
 
     return final_results
-
-def count_supplement(image, path, results):
-
-    boxes = detect_voter_boxes(path)
-
-    for box in boxes:
-
-        sec_from_box = get_section_from_addition_box(image, box)
-
-        if sec_from_box is not None:
-            results[sec_from_box]["added"] += 1
-
-
