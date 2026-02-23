@@ -1,0 +1,119 @@
+import csv
+import re
+from pathlib import Path
+from multiprocessing import Pool, cpu_count
+from pdf_image import pdf_to_images
+from process_pdf import process_pages
+
+
+PDF_FOLDER = Path(r"C:\WEB\scrape\pdf")
+OUTPUT_CSV = Path(r"C:\WEB\scrape\outputs\PS_summary.csv")
+OUTPUT_CSV.parent.mkdir(exist_ok=True)
+
+
+# ============================
+# Extract PS number
+# ============================
+
+def extract_ps_number(filename):
+    match = re.search(r"HIN-(\d+)-WI", filename)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+# ============================
+# Worker Function (must be top-level!)
+# ============================
+
+def process_wrapper(pdf_path):
+
+    ps_number = extract_ps_number(pdf_path.name)
+
+    print(f"Processing PS {ps_number}")
+
+    results = process_single_er(
+        pdf_path,
+        output_folder=r"C:\WEB\scrape\debug\images"
+    )
+
+    rows = []
+
+    for section in sorted(results.keys()):
+        data = results[section]
+
+        rows.append([
+            ps_number,
+            section,
+            data["total"],
+            data["deleted"],
+            data["added"],
+            data["net"]
+        ])
+
+    return rows
+
+
+# ============================
+# Main Execution Block
+# ============================
+
+
+if __name__ == "__main__":
+
+    from multiprocessing import Pool, cpu_count
+
+    pdf_files = sorted(
+        PDF_FOLDER.glob("*.pdf"),
+        key=lambda x: extract_ps_number(x.name)
+    )
+
+    print(f"Total PS files: {len(pdf_files)}")
+
+    workers = max(2, cpu_count() // 2)
+    print(f"Using {workers} CPU cores")
+
+    with Pool(processes=workers) as pool:
+        results = pool.map(process_wrapper, pdf_files)
+
+    all_rows = []
+
+    for ps_rows in results:
+        all_rows.extend(ps_rows)
+
+    # Write CSV
+    with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
+
+        writer = csv.writer(file)
+        writer.writerow(["PS", "Section", "Count", "Delete", "Add", "Net"])
+        writer.writerows(all_rows)
+
+    print(f"\nParallel PS CSV exported → {OUTPUT_CSV}")
+
+
+def process_single_er(pdf_path, output_folder, force_reconvert=False):
+
+    pdf_path = Path(pdf_path)
+    output_folder = Path(output_folder)
+
+    image_folder = output_folder / pdf_path.stem
+    image_folder.mkdir(parents=True, exist_ok=True)
+
+    # Check for existing images
+    existing_images = sorted(image_folder.glob("page_*.png"))
+
+    if existing_images and not force_reconvert:
+        print(f"Using existing images for {pdf_path.stem}")
+        images = [str(p) for p in existing_images]
+
+    else:
+        print(f"Converting PDF → images for {pdf_path.stem}")
+        images = pdf_to_images(
+            pdf_path,
+            image_folder,
+            dpi=400
+        )
+
+    results = process_pages(images)
+
+    return results
