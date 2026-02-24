@@ -5,6 +5,7 @@ from box_detector import detect_voter_boxes
 from deleted_detector import is_deleted_box
 from header_detector import get_section_number
 from supplementary_detector import supplement_section  # correct import
+from gender_detector import detect_gender
 
 
 def process_pages(image_paths):
@@ -12,7 +13,10 @@ def process_pages(image_paths):
     results = defaultdict(lambda: {
         "total": 0,
         "deleted": 0,
-        "added": 0
+        "added": 0,
+        "male": 0,
+        "female": 0,
+        "third": 0
     })
 
     total_pages = len(image_paths)
@@ -41,14 +45,11 @@ def process_pages(image_paths):
             
             boxes = detect_voter_boxes(path)
 
-            print(f"DEBUG: {len(boxes)} boxes on supplement page {idx+1}")
-
             for box in boxes:
 
                 sec_added = supplement_section(image, box, debug=True)  # use correct function
 
                 if sec_added is not None:
-                    print(f"DEBUG Added: Section {sec_added}")
                     results[sec_added]["added"] += 1
 
             continue
@@ -63,6 +64,13 @@ def process_pages(image_paths):
 
             if is_deleted_box(image, box):
                 results[section_no]["deleted"] += 1
+                continue
+            
+            gender = detect_gender(image, box)
+
+            if gender:
+                results[section_no][gender] += 1
+                    
 
     # ======= COMPUTE FINAL RESULTS =======
 
@@ -73,6 +81,9 @@ def process_pages(image_paths):
             "total": data["total"],
             "deleted": data["deleted"],
             "added": data["added"],
+            "male": data["male"],
+            "female": data["female"],
+            "third": data["third"],
             "net": data["total"] - data["deleted"] + data["added"]
         }
 

@@ -40,11 +40,7 @@ def get_section_number(image, page_index=None):
             best_score = max_val
             best_section = section_number
 
-    # Debug (optional)
-    if page_index is not None:
-        print(f"Page {page_index} | Best Score: {best_score:.3f} | Section: {best_section}")
-
-    # 🔒 Hard threshold
+    # threshold
     if best_score >= 0.85:
         return best_section
 

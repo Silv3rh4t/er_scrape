@@ -1,5 +1,6 @@
 from pdf2image import convert_from_path
 from pathlib import Path
+from tqdm import tqdm
 
 
 

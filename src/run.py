@@ -2,17 +2,28 @@ import csv
 import re
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
+from datetime import datetime
+
 from pdf_image import pdf_to_images
 from process_pdf import process_pages
 
 
+# ============================
+# CONFIG
+# ============================
+
 PDF_FOLDER = Path(r"C:\WEB\scrape\pdf")
-OUTPUT_CSV = Path(r"C:\WEB\scrape\outputs\PS_summary.csv")
+
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+OUTPUT_CSV = Path(
+    fr"C:\WEB\scrape\outputs\PS_summary_{timestamp}.csv"
+)
 OUTPUT_CSV.parent.mkdir(exist_ok=True)
 
 
 # ============================
-# Extract PS number
+# UTILITIES
 # ============================
 
 def extract_ps_number(filename):
@@ -23,7 +34,36 @@ def extract_ps_number(filename):
 
 
 # ============================
-# Worker Function (must be top-level!)
+# SINGLE ER PROCESSOR
+# ============================
+
+def process_single_er(pdf_path, output_folder, force_reconvert=False):
+
+    pdf_path = Path(pdf_path)
+    output_folder = Path(output_folder)
+
+    image_folder = output_folder / pdf_path.stem
+    image_folder.mkdir(parents=True, exist_ok=True)
+
+    existing_images = sorted(image_folder.glob("page_*.png"))
+
+    if existing_images and not force_reconvert:
+        print(f"Using existing images for {pdf_path.stem}")
+        images = [str(p) for p in existing_images]
+    else:
+        images = pdf_to_images(
+            pdf_path,
+            image_folder,
+            dpi=400   # reduced from 400 for efficiency
+        )
+
+    results = process_pages(images)
+
+    return results
+
+
+# ============================
+# MULTIPROCESS WRAPPER
 # ============================
 
 def process_wrapper(pdf_path):
@@ -45,23 +85,23 @@ def process_wrapper(pdf_path):
         rows.append([
             ps_number,
             section,
-            data["total"],
-            data["deleted"],
-            data["added"],
-            data["net"]
+            data.get("total", 0),
+            data.get("deleted", 0),
+            data.get("added", 0),
+            data.get("male", 0),
+            data.get("female", 0),
+            data.get("third", 0),
+            data.get("net", 0)
         ])
 
     return rows
 
 
 # ============================
-# Main Execution Block
+# MAIN
 # ============================
 
-
 if __name__ == "__main__":
-
-    from multiprocessing import Pool, cpu_count
 
     pdf_files = sorted(
         PDF_FOLDER.glob("*.pdf"),
@@ -70,50 +110,38 @@ if __name__ == "__main__":
 
     print(f"Total PS files: {len(pdf_files)}")
 
-    workers = max(2, cpu_count() // 2)
+    # Controlled worker scaling
+    workers = min(len(pdf_files), max(2, cpu_count() // 2))
     print(f"Using {workers} CPU cores")
 
     with Pool(processes=workers) as pool:
-        results = pool.map(process_wrapper, pdf_files)
+        results = pool.map(process_wrapper, pdf_files, chunksize=1)
 
     all_rows = []
 
     for ps_rows in results:
         all_rows.extend(ps_rows)
 
+    # Sort final output
+    all_rows.sort(key=lambda x: (x[0], x[1]))
+
     # Write CSV
     with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
 
         writer = csv.writer(file)
-        writer.writerow(["PS", "Section", "Count", "Delete", "Add", "Net"])
+
+        writer.writerow([
+            "PS",
+            "Section",
+            "Count",
+            "Delete",
+            "Add",
+            "Male",
+            "Female",
+            "Third",
+            "Net"
+        ])
+
         writer.writerows(all_rows)
 
     print(f"\nParallel PS CSV exported → {OUTPUT_CSV}")
-
-
-def process_single_er(pdf_path, output_folder, force_reconvert=False):
-
-    pdf_path = Path(pdf_path)
-    output_folder = Path(output_folder)
-
-    image_folder = output_folder / pdf_path.stem
-    image_folder.mkdir(parents=True, exist_ok=True)
-
-    # Check for existing images
-    existing_images = sorted(image_folder.glob("page_*.png"))
-
-    if existing_images and not force_reconvert:
-        print(f"Using existing images for {pdf_path.stem}")
-        images = [str(p) for p in existing_images]
-
-    else:
-        print(f"Converting PDF → images for {pdf_path.stem}")
-        images = pdf_to_images(
-            pdf_path,
-            image_folder,
-            dpi=400
-        )
-
-    results = process_pages(images)
-
-    return results

@@ -2,9 +2,6 @@ import cv2
 import numpy as np
 
 
-# ===============================
-# LOAD + PREPROCESS TEMPLATE ONCE
-# ===============================
 
 TEMPLATE_PATH = r"C:\WEB\scrape\template\D.png"
 
@@ -21,10 +18,6 @@ template_edges = cv2.Canny(template_gray, 50, 150)
 
 th, tw = template_edges.shape
 
-
-# ===============================
-# DELETED DETECTOR
-# ===============================
 
 def is_deleted_box(image, box):
 
