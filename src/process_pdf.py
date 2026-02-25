@@ -24,7 +24,7 @@ def process_pages(image_paths):
     for idx, path in enumerate(image_paths):
 
         # Skip first 2 and last page
-        if idx < 2 or idx == total_pages - 1:
+        if idx < 3 or idx == total_pages - 1:
             continue
 
         image = cv2.imread(path)
@@ -42,15 +42,34 @@ def process_pages(image_paths):
         # ======= SUPPLEMENT PAGE =======
         if section_no == 0:
             print(f"Page {idx+1} -> Supplement List")
-            
+                    
             boxes = detect_voter_boxes(path)
 
             for box in boxes:
 
-                sec_added = supplement_section(image, box, debug=True)  # use correct function
+                sec_added = supplement_section(image, box)
 
-                if sec_added is not None:
-                    results[sec_added]["added"] += 1
+                if sec_added is None:
+                    continue
+
+                if sec_added not in results:
+                    results[sec_added] = {
+                        "total": 0,
+                        "deleted": 0,
+                        "added": 0,
+                        "male": 0,
+                        "female": 0,
+                        "third": 0
+                    }
+
+                gender = detect_gender(image, box)
+
+                if gender is None:
+                    print("Supplement gender detection weak — skipping")
+                    continue
+
+                results[sec_added][gender] += 1
+                results[sec_added]["added"] += 1
 
             continue
 

@@ -34,6 +34,4 @@ def is_deleted_box(image, box):
 
     _, max_val, _, _ = cv2.minMaxLoc(result)
 
-    print("Score:", max_val)
-
     return max_val >= 0.60

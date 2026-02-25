@@ -1,56 +1,59 @@
 import cv2
 from pathlib import Path
 
+
 GENDER_TEMPLATE_DIR = Path(r"C:\WEB\scrape\template\gender")
-THRESHOLD = 0.80
+THRESHOLD = 0.51 
 
 gender_templates = {}
 
-# Load templates
 for file in GENDER_TEMPLATE_DIR.glob("*.png"):
     name = file.stem.lower()
     tmpl = cv2.imread(str(file), 0)
     if tmpl is not None:
         gender_templates[name] = tmpl
 
-
 def detect_gender(image, box, debug=False):
 
     x, y, w, h = box
     roi = image[y:y+h, x:x+w]
 
-    # Bottom 30% of voter box
-    bottom_region = roi[int(h * 0.65):h, :]
-
-    # Right half (where gender text usually is)
-    candidate = bottom_region[:, int(w * 0.4):]
-
-    if candidate.size == 0:
+    if roi.size == 0:
         return None
 
-    gray = cv2.cvtColor(candidate, cv2.COLOR_BGR2GRAY)
+    windows = [
+        roi[:, int(w * 0.10):int(w * 0.40)],
+        roi[:, int(w * 0.20):int(w * 0.50)],
+        roi[:, int(w * 0.30):int(w * 0.60)],
+        roi[:, int(w * 0.40):int(w * 0.80)],
+    ]
 
     best_label = None
     best_score = 0
 
-    for label, tmpl in gender_templates.items():
+    for window in windows:
 
-        result = cv2.matchTemplate(
-            gray,
-            tmpl,
-            cv2.TM_CCOEFF_NORMED
-        )
+        gray = cv2.cvtColor(window, cv2.COLOR_BGR2GRAY)
 
-        _, max_val, _, _ = cv2.minMaxLoc(result)
+        for label, tmpl in gender_templates.items():
 
-        if max_val > best_score:
-            best_score = max_val
-            best_label = label
+            if window.shape[0] < tmpl.shape[0] or window.shape[1] < tmpl.shape[1]:
+                continue
+
+            result = cv2.matchTemplate(
+                gray,
+                tmpl,
+                cv2.TM_CCOEFF_NORMED
+            )
+
+            _, max_val, _, _ = cv2.minMaxLoc(result)
+
+            if max_val > best_score:
+                best_score = max_val
+                best_label = label
 
     if debug:
-        print("Gender score:", best_score, best_label)
+        print(f"Gender detection | best {best_score} -> {best_label}")
 
-    if best_score >= THRESHOLD:
-        return best_label
-
-    return None
+    print(best_score)
+    return best_label if best_score >= THRESHOLD else None

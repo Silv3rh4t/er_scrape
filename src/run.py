@@ -8,9 +8,6 @@ from pdf_image import pdf_to_images
 from process_pdf import process_pages
 
 
-# ============================
-# CONFIG
-# ============================
 
 PDF_FOLDER = Path(r"C:\WEB\scrape\pdf")
 
@@ -22,9 +19,6 @@ OUTPUT_CSV = Path(
 OUTPUT_CSV.parent.mkdir(exist_ok=True)
 
 
-# ============================
-# UTILITIES
-# ============================
 
 def extract_ps_number(filename):
     match = re.search(r"HIN-(\d+)-WI", filename)
@@ -33,9 +27,6 @@ def extract_ps_number(filename):
     return None
 
 
-# ============================
-# SINGLE ER PROCESSOR
-# ============================
 
 def process_single_er(pdf_path, output_folder, force_reconvert=False):
 
@@ -54,17 +45,13 @@ def process_single_er(pdf_path, output_folder, force_reconvert=False):
         images = pdf_to_images(
             pdf_path,
             image_folder,
-            dpi=400   # reduced from 400 for efficiency
+            dpi=400
         )
 
     results = process_pages(images)
 
     return results
 
-
-# ============================
-# MULTIPROCESS WRAPPER
-# ============================
 
 def process_wrapper(pdf_path):
 
@@ -95,11 +82,6 @@ def process_wrapper(pdf_path):
         ])
 
     return rows
-
-
-# ============================
-# MAIN
-# ============================
 
 if __name__ == "__main__":
 
