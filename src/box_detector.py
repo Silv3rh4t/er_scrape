@@ -33,11 +33,11 @@ def detect_voter_boxes(image_path, debug=False):
     # Sort top-to-bottom, then left-to-right
     boxes = sorted(boxes, key=lambda b: (b[1], b[0]))
 
-    if debug:
-        debug_img = img.copy()
-        for (x, y, w, h) in boxes:
-            cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0,255,0), 3)
 
-        cv2.imwrite("debug_boxes.png", debug_img)
+    debug_img = img.copy()
+    for (x, y, w, h) in boxes:
+        cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0,255,0), 3)
+
+    cv2.imwrite("C:/WEB/scrape/debug/debug_boxes.png", debug_img)
 
     return boxes

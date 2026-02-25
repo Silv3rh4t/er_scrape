@@ -24,7 +24,7 @@ def process_pages(image_paths):
     for idx, path in enumerate(image_paths):
 
         # Skip first 2 and last page
-        if idx < 3 or idx == total_pages - 1:
+        if idx < 2 or idx == total_pages - 1:
             continue
 
         image = cv2.imread(path)
