@@ -1,5 +1,34 @@
-debug/*
-outputs/*
-pdf/*
+## Python
+__pycache__/
+*.py[cod]
+*$py.class
+src/__pycache__/
+
+# Virtual environments
 venv/
+.venv/
+env/
+ENV/
+
+## IDE / Editor
+.vscode/
+.idea/
+*.code-workspace
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Logs / debug artifacts
+debug/
+debug_*.png
+
+## Generated data / outputs
+outputs/
+
+## Input PDFs (large, can be regenerated or re-downloaded)
+pdf/
+
+## Misc
+*.log
 
