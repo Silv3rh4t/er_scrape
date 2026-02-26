@@ -52,6 +52,4 @@ def detect_gender(image, box, debug=False):
                 best_score = max_val
                 best_label = label
 
-    print(f"Gender detection | best {best_score} -> {best_label}")
-
-    return best_label if best_score >= THRESHOLD else None
+    return best_label if best_score >= THRESHOLD else "third"
